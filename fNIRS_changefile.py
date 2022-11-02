@@ -55,7 +55,40 @@ def dpf(age, wv):
     dpf = 223.3 + 0.05624 * pow(age, 0.8493) - 5.723 * pow(10, -7) * pow(wv, 3) + 0.01245 * wv * wv - 0.9025 * wv
     return dpf
 
+def fNIRS_algo1(OD1, OD2, DPF1, DPF2, L1, L2, E, R):
+    E_T = np.transpose(E)
+    R_inv = np.linalg.inv(R)
+    delta_OD1 = OD1 / (L1 * dpf_1)
+    delta_OD2 = OD2 / (L2 * dpf_2)
+    print(len(delta_OD2))
+    delta_OD1 = delta_OD1[0:len(delta_OD2)]
+    print(delta_OD1.shape)
+    print(delta_OD2.shape)
+    OD_mat = np.zeros((2, len(delta_OD1)))
+    OD_mat[0] = delta_OD1
+    OD_mat[1] = delta_OD2
+    print(OD_mat)
 
+    coe_mat = np.linalg.inv(E_T * R_inv * E) * E_T * R_inv
+    oxy = coe_mat * OD_mat
+
+
+
+    return delta_OD1,delta_OD2,oxy
+
+
+def fNIRS_algo2(OD1, OD2, DPF1, DPF2, L1,E):
+    E_inv = np.linalg.inv(E)
+    delta_OD1 = OD1 / dpf_1
+    delta_OD2 = OD2 / dpf_2
+    delta_OD1 = delta_OD1[0:len(delta_OD2)]
+    OD_mat = np.zeros((2, len(delta_OD1)))
+    OD_mat[0] = delta_OD1
+    OD_mat[1] = delta_OD2
+    coe_mat = (1/L1) * E_inv
+    oxy = coe_mat * OD_mat
+
+    return delta_OD1,delta_OD2,oxy
 """
 #plot
 plt.plot(arr1)
@@ -106,29 +139,9 @@ DPF1 = 6  # DPF
 DPF2 = 6
 
 
-def fNIRS_algo1(OD1, OD2, DPF1, DPF2, L1, L2, E, R):
-    E_T = np.transpose(E)
-    R_inv = np.linalg.inv(R)
-    delta_OD1 = OD1 / (L1 * dpf_1)
-    delta_OD2 = OD2 / (L2 * dpf_2)
-    print(len(delta_OD2))
-    delta_OD1 = delta_OD1[0:len(delta_OD2)]
-    print(delta_OD1.shape)
-    print(delta_OD2.shape)
-    OD_mat = np.zeros((2, len(delta_OD1)))
-    OD_mat[0] = delta_OD1
-    OD_mat[1] = delta_OD2
-    print(OD_mat)
-
-    coe_mat = np.linalg.inv(E_T * R_inv * E) * E_T * R_inv
-    oxy = coe_mat * OD_mat
 
 
-
-    return delta_OD1,delta_OD2,oxy
-
-
-delta_OD1,delta_OD2,oxy = fNIRS_algo1(OD1, OD2, dpf_1, dpf_2, L1, L2, E, R)
+delta_OD1,delta_OD2,oxy = fNIRS_algo2(OD1, OD2, dpf_1, dpf_2, L1, E)
 
 t = np.arange(len(delta_OD1))
 plt.plot(t, delta_OD1, label='850nm')
