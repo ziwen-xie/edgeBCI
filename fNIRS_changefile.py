@@ -69,6 +69,7 @@ arr1, arr2 = import_data(name1, name2, 2)
 OD1 = np.asarray(arr1, dtype=float)  # change to numpy array
 OD2 = np.asarray(arr2, dtype=float)
 
+
 I0_w1 = OD1[0]  # define the baseline
 I0_w2 = OD2[0]
 
@@ -106,6 +107,17 @@ OD_mat[0] = delta_OD1
 OD_mat[1] = delta_OD2
 print(OD_mat)
 
+
+t = np.arange(len(delta_OD1))
+plt.plot(t,delta_OD1,label='850nm')
+plt.plot(t,delta_OD2,label= '770nm')
+plt.title('Raw Signal')
+plt.xlabel("time(ms)")
+plt.ylabel("Intensity")
+
+plt.legend()
+plt.show()
+
 coe_mat = np.linalg.inv(E_T * R_inv * E) * E_T * R_inv
 oxy = coe_mat * OD_mat
 
@@ -125,5 +137,9 @@ t = np.arange(len(np.transpose(oxy[0])))
 print(t)
 plt.plot(t,np.transpose(oxy[0]),label='HbO2')
 plt.plot(t,np.transpose(oxy[1]),label = 'HbR')
+plt.title('Change of concentration over time')
+plt.xlabel("time(ms)")
+plt.ylabel("change of concentration(uM)")
+
 plt.legend()
 plt.show()
