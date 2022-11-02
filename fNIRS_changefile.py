@@ -50,9 +50,12 @@ def import_data(name1, name2, type):
     print(arr1)
     return arr1, arr2
 
-def dpf(age,wv):
-    dpf = 223.3 + 0.05624* pow(age,0.8493)-5.723*pow(10,-7)*pow(wv,3)+0.01245*wv*wv-0.9025*wv
+
+def dpf(age, wv):
+    dpf = 223.3 + 0.05624 * pow(age, 0.8493) - 5.723 * pow(10, -7) * pow(wv, 3) + 0.01245 * wv * wv - 0.9025 * wv
     return dpf
+
+
 """
 #plot
 plt.plot(arr1)
@@ -69,57 +72,8 @@ arr1, arr2 = import_data(name1, name2, 2)
 OD1 = np.asarray(arr1, dtype=float)  # change to numpy array
 OD2 = np.asarray(arr2, dtype=float)
 
-
 I0_w1 = OD1[0]  # define the baseline
 I0_w2 = OD2[0]
-
-lambda_1 = 850
-lambda_2 = 770
-age =22
-dpf_1 = dpf(age,lambda_1)
-dpf_2 = dpf(age,lambda_2)
-
-
-E_850_hbo2 = 1058  # extinction coefficients
-E_850_hb = 691.32
-E_770_hbo2 = 650
-E_770_hb = 1311.88
-
-E = np.matrix([[E_850_hbo2, E_850_hb], [E_770_hbo2, E_770_hb]])  # define E
-R = np.matrix([[1, 0], [0, 1]])  # R matrix
-
-E_T = np.transpose(E)
-R_inv = np.linalg.inv(R)
-
-L1 = 10  # path length
-L2 = 10
-DPF1 = 6  # DPF
-DPF2 = 6
-
-delta_OD1 = OD1 / (L1 * dpf_1)
-delta_OD2 = OD2 / (L2 * dpf_2)
-print(len(delta_OD2))
-delta_OD1 = delta_OD1[0:len(delta_OD2)]
-print(delta_OD1.shape)
-print(delta_OD2.shape)
-OD_mat = np.zeros((2, len(delta_OD1)))
-OD_mat[0] = delta_OD1
-OD_mat[1] = delta_OD2
-print(OD_mat)
-
-
-t = np.arange(len(delta_OD1))
-plt.plot(t,delta_OD1,label='850nm')
-plt.plot(t,delta_OD2,label= '770nm')
-plt.title('Raw Signal')
-plt.xlabel("time(ms)")
-plt.ylabel("Intensity")
-
-plt.legend()
-plt.show()
-
-coe_mat = np.linalg.inv(E_T * R_inv * E) * E_T * R_inv
-oxy = coe_mat * OD_mat
 
 # calculate OD
 for i in range(len(arr1)):
@@ -132,11 +86,65 @@ for i in range(len(arr2)):
         OD2[i] = np.log(I0_w2 / OD2[i])
 # print(OD2)
 
+lambda_1 = 850
+lambda_2 = 770
+age = 22
+dpf_1 = dpf(age, lambda_1)
+dpf_2 = dpf(age, lambda_2)
+
+E_850_hbo2 = 1058  # extinction coefficients
+E_850_hb = 691.32
+E_770_hbo2 = 650
+E_770_hb = 1311.88
+
+E = np.matrix([[E_850_hbo2, E_850_hb], [E_770_hbo2, E_770_hb]])  # define E
+R = np.matrix([[1, 0], [0, 1]])  # R matrix
+
+L1 = 10  # path length
+L2 = 10
+DPF1 = 6  # DPF
+DPF2 = 6
+
+
+def fNIRS_algo1(OD1, OD2, DPF1, DPF2, L1, L2, E, R):
+    E_T = np.transpose(E)
+    R_inv = np.linalg.inv(R)
+    delta_OD1 = OD1 / (L1 * dpf_1)
+    delta_OD2 = OD2 / (L2 * dpf_2)
+    print(len(delta_OD2))
+    delta_OD1 = delta_OD1[0:len(delta_OD2)]
+    print(delta_OD1.shape)
+    print(delta_OD2.shape)
+    OD_mat = np.zeros((2, len(delta_OD1)))
+    OD_mat[0] = delta_OD1
+    OD_mat[1] = delta_OD2
+    print(OD_mat)
+
+    coe_mat = np.linalg.inv(E_T * R_inv * E) * E_T * R_inv
+    oxy = coe_mat * OD_mat
+
+
+
+    return delta_OD1,delta_OD2,oxy
+
+
+delta_OD1,delta_OD2,oxy = fNIRS_algo1(OD1, OD2, dpf_1, dpf_2, L1, L2, E, R)
+
+t = np.arange(len(delta_OD1))
+plt.plot(t, delta_OD1, label='850nm')
+plt.plot(t, delta_OD2, label='770nm')
+plt.title('Raw Signal')
+plt.xlabel("time(ms)")
+plt.ylabel("Change of Intensity")
+
+plt.legend()
+plt.show()
+
+
 print(oxy[0].shape)
 t = np.arange(len(np.transpose(oxy[0])))
-print(t)
-plt.plot(t,np.transpose(oxy[0]),label='HbO2')
-plt.plot(t,np.transpose(oxy[1]),label = 'HbR')
+plt.plot(t, np.transpose(oxy[0]), label='HbO2')
+plt.plot(t, np.transpose(oxy[1]), label='HbR')
 plt.title('Change of concentration over time')
 plt.xlabel("time(ms)")
 plt.ylabel("change of concentration(uM)")
