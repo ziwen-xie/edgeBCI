@@ -89,6 +89,20 @@ def fNIRS_algo2(OD1, OD2, DPF1, DPF2, L1,E):
     oxy = coe_mat * OD_mat
 
     return delta_OD1,delta_OD2,oxy
+
+def cal_change(I0_w1,I0_w2,OD1,OD2):
+    for i in range(len(OD1)):
+        if OD1[i] != 0:
+            OD1[i] = np.log(I0_w1 / OD1[i])
+    # print(OD1)
+
+    for i in range(len(OD2)):
+        if OD2[i] != 0:
+            OD2[i] = np.log(I0_w2 / OD2[i])
+    return OD1,OD2
+
+
+
 """
 #plot
 plt.plot(arr1)
@@ -100,7 +114,11 @@ plt.show()
 # algorithm
 name1 = 'test1.csv'
 name2 = '770nm.csv'
+
+
 arr1, arr2 = import_data(name1, name2, 2)
+
+
 # define and initialize
 OD1 = np.asarray(arr1, dtype=float)  # change to numpy array
 OD2 = np.asarray(arr2, dtype=float)
@@ -108,17 +126,9 @@ OD2 = np.asarray(arr2, dtype=float)
 I0_w1 = OD1[0]  # define the baseline
 I0_w2 = OD2[0]
 
+cal_change(I0_w1, I0_w2, OD1, OD2)
 # calculate OD
-for i in range(len(arr1)):
-    if OD1[i] != 0:
-        OD1[i] = np.log(I0_w1 / OD1[i])
-# print(OD1)
-
-for i in range(len(arr2)):
-    if OD2[i] != 0:
-        OD2[i] = np.log(I0_w2 / OD2[i])
-# print(OD2)
-
+# define coefficients
 lambda_1 = 850
 lambda_2 = 770
 age = 22
@@ -164,3 +174,4 @@ plt.ylabel("change of concentration(uM)")
 
 plt.legend()
 plt.show()
+
