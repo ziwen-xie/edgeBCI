@@ -5,34 +5,32 @@ import platform
 from datetime import datetime
 from typing import Callable, Any
 
-import pylsl
 from aioconsole import ainput
 from bleak import BleakClient, discover, BleakScanner
-from pylsl import StreamInfo, StreamOutlet, IRREGULAR_RATE
 
-lsl_data_chunk_size = 1
+output_file = "../microphone_dump.csv"
+
 selected_device = []
 
 
-class LSLOutletInterface:
+class DataToFile:
+    column_names = ["time", "delay", "data_value"]
 
-    def __init__(self, stream_name):
-        info = StreamInfo(stream_name, "Physio", 1, IRREGULAR_RATE, 'float32', 'EdgeBCIID')
-        self.outlet = StreamOutlet(info)
+    def __init__(self, write_path):
+        self.path = write_path
 
-    def send_data(self, data_values: [float], timestamps: [float]):
+    def write_to_csv(self, times: [int], delays: [datetime], data_values: [Any]):
 
-        if len({len(timestamps), len(data_values)}) > 1:
-            raise Exception("Data and timestamp lists are the same length.")
-        for value, ts in zip(data_values, timestamps):
-            self.outlet.push_sample([value], timestamp=ts)
-        # with open(self.path, "a+") as f:
-        #     if os.stat(self.path).st_size == 0:
-        #         print("Created file.")
-        #         f.write(",".join([str(name) for name in self.column_names]) + ",\n")
-        #     else:
-        #         for i in range(len(data_values)):
-        #             f.write(f"{times[i]},{delays[i]},{data_values[i]},\n")
+        if len(set([len(times), len(delays), len(data_values)])) > 1:
+            raise Exception("Not all data lists are the same length.")
+
+        with open(self.path, "a+") as f:
+            if os.stat(self.path).st_size == 0:
+                print("Created file.")
+                f.write(",".join([str(name) for name in self.column_names]) + ",\n")
+            else:
+                for i in range(len(data_values)):
+                    f.write(f"{times[i]},{delays[i]},{data_values[i]},\n")
 
 
 class Connection:
@@ -42,18 +40,21 @@ class Connection:
             self,
             read_characteristic: str,
             write_characteristic: str,
-            lsl_outlet_interface: Callable[[[float], [float]], None],
+            data_dump_handler: Callable[[str, Any], None],
+            data_dump_size: int = 256,
     ):
         self.read_characteristic = read_characteristic
         self.write_characteristic = write_characteristic
-        self.lsl_outlet_interface = lsl_outlet_interface
+        self.data_dump_handler = data_dump_handler
 
         self.last_packet_time = datetime.now()
+        self.dump_size = data_dump_size
         self.connected = False
         self.connected_device = None
 
         self.rx_data = []
         self.rx_timestamps = []
+        self.rx_delays = []
 
     def on_disconnect(self, client: BleakClient, future: asyncio.Future):
         self.connected = False
@@ -99,7 +100,7 @@ class Connection:
         await asyncio.sleep(2.0)  # Wait for BLE to initialize.
         devices = await BleakScanner.discover()
 
-        print("Please select device [give the device index]: ")
+        print("Please select device: ")
         for i, device in enumerate(devices):
             print(f"{i}: {device.name}")
 
@@ -121,20 +122,22 @@ class Connection:
         self.client = BleakClient(devices[response].address, disconnected_callback=self.on_disconnect)
 
     def record_time_info(self):
-        present_time = pylsl.local_clock()
+        present_time = datetime.now()
         self.rx_timestamps.append(present_time)
+        self.rx_delays.append((present_time - self.last_packet_time).microseconds)
         self.last_packet_time = present_time
 
-    def clear_received_data_and_timestamps(self):
+    def clear_lists(self):
         self.rx_data.clear()
+        self.rx_delays.clear()
         self.rx_timestamps.clear()
 
     def notification_handler(self, sender: str, data: Any):
         self.rx_data.append(int.from_bytes(data, byteorder="big"))
         self.record_time_info()
-        if len(self.rx_data) >= lsl_data_chunk_size:
-            self.lsl_outlet_interface(self.rx_data, self.rx_timestamps)
-            self.clear_received_data_and_timestamps()
+        if len(self.rx_data) >= self.dump_size:
+            self.data_dump_handler(self.rx_data, self.rx_timestamps, self.rx_delays)
+            self.clear_lists()
 
 
 #############
@@ -162,15 +165,14 @@ async def main():
 #############
 read_characteristic = "00001143-0000-1000-8000-00805f9b34fb"
 write_characteristic = "00001142-0000-1000-8000-00805f9b34fb"
-stream_name = "BLE-EdgeBCI"
 
 if __name__ == "__main__":
 
     # Create the event loop.
     loop = asyncio.get_event_loop()
 
-    stream_interface = LSLOutletInterface(stream_name)
-    connection = Connection(read_characteristic, write_characteristic, stream_interface.send_data)
+    data_to_file = DataToFile(output_file)
+    connection = Connection(read_characteristic, write_characteristic, data_to_file.write_to_csv)
     try:
         asyncio.ensure_future(connection.manager())
         asyncio.ensure_future(user_console_manager(connection))

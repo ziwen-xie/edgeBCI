@@ -80,7 +80,7 @@ void setup() {
   Serial.println("Peripheral advertising info: ");
   Serial.print("Name: ");
   Serial.println(nameOfPeripheral);
-  Serial.print("MAC (BLE address): ");
+  Serial.print("MAC (BLE): ");
   Serial.println(BLE.address());
   Serial.print("Service UUID: ");
   Serial.println(edgeBCIService.uuid());
